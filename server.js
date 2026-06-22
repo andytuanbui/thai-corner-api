@@ -156,7 +156,8 @@ app.post('/api/order', requireApiKey, async (req, res) => {
 app.post('/api/booking', requireApiKey, async (req, res) => {
   try {
     const body = req.body || {};
-    const { guests, date_time, name, phone, notes } = body;
+    const { date_time, name, phone, notes } = body;
+   const guests = body.guests != null ? (parseInt(body.guests, 10) || null) : null;
 
     if (!name && !date_time) {
       console.log('📋 Tom body — verifieringsanrop, svarar OK');
