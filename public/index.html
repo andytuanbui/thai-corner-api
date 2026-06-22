@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thai Corner — Beställningar</title>
+  <style>
+    :root {
+      --bg:           #0F172A;
+      --surface:      #1E293B;
+      --surface-hi:   #263548;
+      --border:       #334155;
+      --takeaway:     #F97316;
+      --booking:      #EF4444;
+      --text:         #F1F5F9;
+      --muted:        #94A3B8;
+      --green:        #22C55E;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #080E1C;
+      padding: 0.9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 3px solid var(--takeaway);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--takeaway);
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-left: auto;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.5s;
+      flex-shrink: 0;
+    }
+
+    .sound-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.3rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      white-space: nowrap;
+    }
+    .sound-btn:hover { background: var(--surface-hi); }
+
+    .tabs {
+      display: flex;
+      padding: 0 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: #0B1422;
+    }
+
+    .tab {
+      padding: 0.75rem 1.2rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 600;
+      transition: color 0.2s, border-color 0.2s;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      color: var(--takeaway);
+      border-bottom-color: var(--takeaway);
+    }
+
+    .tab-badge {
+      display: inline-block;
+      background: var(--takeaway);
+      color: white;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      padding: 0.1rem 0.5rem;
+      margin-left: 0.4rem;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+
+    .content {
+      padding: 1.25rem 1.5rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 4rem 1rem;
+      font-size: 1.1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 10px;
+      margin-bottom: 1rem;
+      display: flex;
+      overflow: hidden;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.3s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .card:hover { background: var(--surface-hi); }
+    .card.resolving { opacity: 0; }
+
+    .card-bar { width: 7px; flex-shrink: 0; }
+    .card-bar.takeaway { background: var(--takeaway); }
+    .card-bar.booking  { background: var(--booking); }
+
+    .card-body {
+      padding: 1rem 1.25rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .type-badge {
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .type-badge.takeaway {
+      background: rgba(249,115,22,0.18);
+      color: var(--takeaway);
+      border: 1px solid rgba(249,115,22,0.4);
+    }
+    .type-badge.booking {
+      background: rgba(239,68,68,0.18);
+      color: var(--booking);
+      border: 1px solid rgba(239,68,68,0.4);
+    }
+
+    .card-age {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .card-phone {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 0.65rem;
+    }
+
+    .item-list { list-style: none; margin-bottom: 0.25rem; }
+
+    .item-list li {
+      font-size: 1.05rem;
+      line-height: 1.5;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .item-list li:last-child { border-bottom: none; }
+
+    .item-num { color: var(--takeaway); font-weight: 700; margin-right: 0.3rem; }
+    .item-note { color: var(--muted); font-style: italic; font-size: 0.9rem; }
+
+    .order-summary {
+      font-size: 1rem;
+      line-height: 1.55;
+      background: rgba(255,255,255,0.04);
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      margin-bottom: 0.25rem;
+    }
+
+    .booking-grid { display: grid; gap: 0.35rem; }
+    .booking-row { display: flex; gap: 0.5rem; font-size: 0.95rem; }
+    .booking-label { color: var(--muted); min-width: 95px; flex-shrink: 0; }
+
+    .card-hint {
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-align: right;
+      margin-top: 0.6rem;
+      opacity: 0.55;
+    }
+
+    .history-item {
+      background: var(--surface);
+      border-radius: 8px;
+      margin-bottom: 0.6rem;
+      padding: 0.7rem 1rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      opacity: 0.7;
+    }
+
+    .history-bar {
+      width: 4px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      align-self: stretch;
+      min-height: 36px;
+    }
+    .history-bar.takeaway { background: var(--takeaway); }
+    .history-bar.booking  { background: var(--booking); }
+
+    .history-body { flex: 1; min-width: 0; }
+
+    .history-meta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .history-meta .htype { font-weight: 700; letter-spacing: 0.05em; }
+
+    .history-content {
+      font-size: 0.9rem;
+      color: var(--text);
+      opacity: 0.85;
+      word-break: break-word;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .overlay-box {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 14px;
+      width: 360px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .overlay-box h2 { color: var(--takeaway); font-size: 1.4rem; margin-bottom: 0.5rem; }
+
+    .overlay-box p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .overlay-box input {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      outline: none;
+    }
+
+    .overlay-box input:focus { border-color: var(--takeaway); }
+
+    .overlay-box button {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--takeaway);
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .overlay-box button:hover { opacity: 0.9; }
+    .overlay-error { color: var(--booking); font-size: 0.85rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+  <div id="overlay" class="overlay" style="display:none">
+    <div class="overlay-box">
+      <h2>🍜 Thai Corner</h2>
+      <p>Ange API-nyckeln för att ansluta till beställningssystemet</p>
+      <input id="key-input" type="password" placeholder="API-nyckel" autocomplete="off" />
+      <button onclick="saveKey()">Anslut</button>
+      <div id="key-error" class="overlay-error" style="display:none">
+        Fel nyckel — kontrollera och försök igen
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <span class="logo">🍜 THAI CORNER</span>
+    <div class="header-right">
+      <div id="status-dot" class="status-dot" title="Anslutningsstatus"></div>
+      <button class="sound-btn" id="sound-btn" onclick="toggleSound()">🔔 Ljud: Av</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-active" onclick="switchTab('active')">
+      Aktiva beställningar <span class="tab-badge" id="active-count">0</span>
+    </div>
+    <div class="tab" id="tab-history" onclick="switchTab('history')">
+      Historik
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="view-active"></div>
+    <div id="view-history" style="display:none"></div>
+  </div>
+
+  <script>
+    let activeOrders  = [];
+    let historyOrders = [];
+    let lastActiveIds = new Set();
+    let currentTab    = 'active';
+    let soundEnabled  = false;
+    let firstLoad     = true;
+    let audioCtx      = null;
+
+    let apiKey = localStorage.getItem('tc_api_key') || '';
+
+    if (!apiKey) {
+      document.getElementById('overlay').style.display = 'flex';
+    } else {
+      startPolling();
+    }
+
+    function saveKey() {
+      const input = document.getElementById('key-input').value.trim();
+      if (!input) return;
+      apiKey = input;
+      fetch('/api/health', { headers: { 'X-API-Key': apiKey } })
+        .then(async r => {
+          if (r.status === 401) {
+            document.getElementById('key-error').style.display = 'block';
+            return;
+          }
+          localStorage.setItem('tc_api_key', apiKey);
+          document.getElementById('overlay').style.display = 'none';
+          document.getElementById('key-error').style.display = 'none';
+          startPolling();
+        })
+        .catch(() => {
+          localStorage.setItem('tc_api_key', apiKey);
+          document.getElementById('overlay').style.display = 'none';
+          startPolling();
+        });
+    }
+
+    document.getElementById('key-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveKey();
+    });
+
+    function startPolling() {
+      refresh();
+      setInterval(refresh, 6000);
+      setInterval(updateAllTimes, 20000);
+    }
+
+    async function refresh() {
+      try {
+        const headers = { 'X-API-Key': apiKey };
+        const [activeRes, histRes] = await Promise.all([
+          fetch('/api/active-orders', { headers }),
+          fetch('/api/history',       { headers }),
+        ]);
+
+        if (activeRes.status === 401) { setStatus('red'); return; }
+
+        activeOrders  = await activeRes.json();
+        historyOrders = await histRes.json();
+
+        const newIds = new Set(activeOrders.map(o => o.id));
+        const hasNew = !firstLoad && activeOrders.some(o => !lastActiveIds.has(o.id));
+        lastActiveIds = newIds;
+        firstLoad = false;
+
+        if (hasNew) playNotification();
+
+        setStatus('green');
+        document.getElementById('active-count').textContent = activeOrders.length;
+        render();
+      } catch (e) {
+        setStatus('red');
+        console.error('Polling-fel:', e);
+      }
+    }
+
+    function setStatus(color) {
+      const colors = { green: '#22C55E', red: '#EF4444', gray: '#94A3B8' };
+      document.getElementById('status-dot').style.background = colors[color] || colors.gray;
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-btn').textContent = soundEnabled ? '🔔 Ljud: På' : '🔔 Ljud: Av';
+      if (soundEnabled) playNotification();
+    }
+
+    function playNotification() {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        [880, 660].forEach((freq, i) => {
+          const osc  = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          const t = audioCtx.currentTime + i * 0.15;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.25, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          osc.start(t);
+          osc.stop(t + 0.3);
+        });
+      } catch (e) {}
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('tab-active').className  = 'tab' + (tab === 'active'  ? ' active' : '');
+      document.getElementById('tab-history').className = 'tab' + (tab === 'history' ? ' active' : '');
+      document.getElementById('view-active').style.display  = tab === 'active'  ? '' : 'none';
+      document.getElementById('view-history').style.display = tab === 'history' ? '' : 'none';
+    }
+
+    function render() { renderActive(); renderHistory(); }
+
+    function renderActive() {
+      const el = document.getElementById('view-active');
+      if (activeOrders.length === 0) {
+        el.innerHTML = '<div class="empty">Inga aktiva beställningar 🎉</div>';
+        return;
+      }
+      el.innerHTML = activeOrders.map(cardHTML).join('');
+    }
+
+    function renderHistory() {
+      const el = document.getElementById('view-history');
+      if (historyOrders.length === 0) {
+        el.innerHTML = '<div class="empty">Ingen historik ännu</div>';
+        return;
+      }
+      el.innerHTML = historyOrders.map(historyItemHTML).join('');
+    }
+
+    function cardHTML(order) {
+      const isBooking = order.type === 'booking';
+      const cls   = isBooking ? 'booking' : 'takeaway';
+      const badge = isBooking ? 'BOKNING' : 'TAKEAWAY';
+      const phone = order.phone ? `<div class="card-phone">📞 ${esc(order.phone)}</div>` : '';
+
+      let details;
+      if (isBooking) {
+        details = bookingDetailsHTML(order);
+      } else if (order.order_summary) {
+        details = `<div class="order-summary">${esc(order.order_summary)}</div>`;
+      } else if (order.items && order.items.length) {
+        details = `<ul class="item-list">${order.items.map(itemHTML).join('')}</ul>`;
+      } else {
+        details = `<span style="color:var(--muted);font-size:.9rem">Ingen detaljerad information</span>`;
+      }
+
+      return `
+        <div class="card"
+             id="card-${esc(order.id)}"
+             data-id="${esc(order.id)}"
+             data-last-tap="0"
+             ondblclick="resolveCard('${esc(order.id)}')"
+             ontouchend="handleTouchEnd(event, '${esc(order.id)}')">
+          <div class="card-bar ${cls}"></div>
+          <div class="card-body">
+            <div class="card-top">
+              <span class="type-badge ${cls}">${badge}</span>
+              <span class="card-age" data-created="${esc(order.created_at)}">${timeAgo(order.created_at)}</span>
+            </div>
+            ${phone}
+            ${details}
+            <div class="card-hint">Dubbelklicka (eller dubbeltryck) för att markera som klar</div>
+          </div>
+        </div>`;
+    }
+
+    function itemHTML(item) {
+      const num  = item.num  ? `<span class="item-num">#${esc(item.num)}</span>` : '';
+      const note = item.note ? ` <span class="item-note">(${esc(item.note)})</span>` : '';
+      return `<li>${num}${esc(item.name)}${note}</li>`;
+    }
+
+    function bookingDetailsHTML(o) {
+      const rows = [];
+      if (o.guests)    rows.push(row('Antal gäster:', o.guests));
+      if (o.date_time) rows.push(row('Datum & tid:',  o.date_time));
+      if (o.name)      rows.push(row('Namn:',         o.name));
+      if (o.notes)     rows.push(row('Anteckningar:', o.notes));
+      return `<div class="booking-grid">${rows.join('')}</div>`;
+    }
+
+    function row(label, val) {
+      return `<div class="booking-row">
+        <span class="booking-label">${label}</span>
+        <span>${esc(String(val))}</span>
+      </div>`;
+    }
+
+    function historyItemHTML(order) {
+      const isBooking = order.type === 'booking';
+      const cls   = isBooking ? 'booking' : 'takeaway';
+      const badge = isBooking ? 'BOKNING'  : 'TAKEAWAY';
+      const phone = order.phone ? `📞 ${esc(order.phone)}` : '';
+      const resolvedStr = order.resolved_at ? `Klar ${timeAgo(order.resolved_at)}` : '';
+
+      let summary = '';
+      if (order.order_summary) {
+        summary = esc(order.order_summary);
+      } else if (order.items && order.items.length) {
+        summary = esc(order.items.map(i => [i.num ? `#${i.num}` : '', i.name, i.note ? `(${i.note})` : ''].filter(Boolean).join(' ')).join(' · '));
+      } else if (isBooking) {
+        summary = esc([order.name, order.guests ? `${order.guests} gäster` : '', order.date_time].filter(Boolean).join(' — '));
+      }
+
+      return `
+        <div class="history-item">
+          <div class="history-bar ${cls}"></div>
+          <div class="history-body">
+            <div class="history-meta">
+              <span class="htype">${badge}</span>
+              ${phone ? `<span>${phone}</span>` : ''}
+              ${resolvedStr ? `<span>${resolvedStr}</span>` : ''}
+            </div>
+            <div class="history-content">${summary || '—'}</div>
+          </div>
+        </div>`;
+    }
+
+    async function resolveCard(id) {
+      const el = document.getElementById(`card-${id}`);
+      if (!el || el.dataset.resolving) return;
+      el.dataset.resolving = '1';
+      el.classList.add('resolving');
+      try {
+        await fetch(`/api/resolve/${id}`, { method: 'POST', headers: { 'X-API-Key': apiKey } });
+        const h = el.offsetHeight;
+        el.style.height = h + 'px';
+        el.style.overflow = 'hidden';
+        el.style.transition = 'height 0.3s ease, margin-bottom 0.3s ease';
+        requestAnimationFrame(() => { el.style.height = '0'; el.style.marginBottom = '0'; });
+        setTimeout(() => refresh(), 350);
+      } catch (e) {
+        el.classList.remove('resolving');
+        delete el.dataset.resolving;
+      }
+    }
+
+    function handleTouchEnd(e, id) {
+      const el = document.getElementById(`card-${id}`);
+      if (!el) return;
+      const now = Date.now();
+      const lastTap = parseInt(el.dataset.lastTap || '0', 10);
+      if (now - lastTap < 450) {
+        e.preventDefault();
+        resolveCard(id);
+        el.dataset.lastTap = '0';
+      } else {
+        el.dataset.lastTap = String(now);
+      }
+    }
+
+    function timeAgo(iso) {
+      const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (diff < 60)   return 'Nyss';
+      if (diff < 3600) return `${Math.floor(diff / 60)} min sen`;
+      return `${Math.floor(diff / 3600)} h sen`;
+    }
+
+    function updateAllTimes() {
+      document.querySelectorAll('[data-created]').forEach(el => {
+        el.textContent = timeAgo(el.dataset.created);
+      });
+    }
+
+    function esc(str) {
+      if (str == null) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  </script>
+</body>
+</html>
