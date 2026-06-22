@@ -1,0 +1,28 @@
+# render.yaml — Render.com deployment-konfiguration
+#
+# Ingen persistent disk behövs — datan lagras i Neon Postgres (gratis).
+# Render gratis-tier somnar efter 15 min inaktivitet.
+# Uppgradera till Starter ($7/mån) om servern ska vara alltid igång.
+
+services:
+  - type: web
+    name: thai-corner-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+
+    envVars:
+      # Render genererar en unik API-nyckel automatiskt
+      - key: API_KEY
+        generateValue: true
+
+      - key: NODE_ENV
+        value: production
+
+      # Lägg till manuellt efter att du skapat Neon-databasen:
+      # Render Dashboard → Environment → Add Environment Variable
+      # Key: DATABASE_URL
+      # Value: postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require
+      - key: DATABASE_URL
+        sync: false   # Markerar att värdet måste fyllas i manuellt
