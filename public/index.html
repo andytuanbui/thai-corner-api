@@ -204,12 +204,57 @@
 
     .order-summary {
       font-size: 1rem;
-      line-height: 1.55;
+      line-height: 1.7;
       background: rgba(255,255,255,0.04);
       padding: 0.6rem 0.8rem;
       border-radius: 6px;
       margin-bottom: 0.25rem;
     }
+    .order-summary .dish-line {
+      display: block;
+      padding: 0.2rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .order-summary .dish-line:last-child { border-bottom: none; }
+
+    /* ─── Modal ─────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.78);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 1rem;
+    }
+    .modal-box {
+      background: #1E293B;
+      border-radius: 14px;
+      border: 1px solid #334155;
+      width: 100%; max-width: 500px;
+      padding: 1.75rem;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute; top: 1rem; right: 1rem;
+      background: none; border: none; color: #94A3B8;
+      font-size: 1.5rem; cursor: pointer; line-height: 1;
+    }
+    .modal-badge {
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em;
+      padding: 0.25rem 0.75rem; border-radius: 4px;
+      display: inline-block; margin-bottom: 1rem;
+    }
+    .modal-badge.takeaway { background: rgba(249,115,22,0.18); color: #F97316; border: 1px solid rgba(249,115,22,0.4); }
+    .modal-badge.booking  { background: rgba(239,68,68,0.18);  color: #EF4444; border: 1px solid rgba(239,68,68,0.4); }
+    .modal-phone { color: #94A3B8; font-size: 0.9rem; margin-bottom: 1rem; }
+    .modal-dishes { list-style: none; }
+    .modal-dishes li {
+      font-size: 1.1rem; padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.07); line-height: 1.4;
+    }
+    .modal-dishes li:last-child { border-bottom: none; }
+    .modal-booking-grid { display: grid; gap: 0.6rem; }
+    .modal-booking-row { display: flex; gap: 0.5rem; font-size: 1rem; }
+    .modal-booking-label { color: #94A3B8; min-width: 110px; flex-shrink: 0; }
+    .modal-time { color: #94A3B8; font-size: 0.8rem; margin-top: 1.2rem; border-top: 1px solid #334155; padding-top: 0.75rem; }
 
     .booking-grid { display: grid; gap: 0.35rem; }
     .booking-row { display: flex; gap: 0.5rem; font-size: 0.95rem; }
@@ -504,7 +549,7 @@
       if (isBooking) {
         details = bookingDetailsHTML(order);
       } else if (order.order_summary) {
-        details = `<div class="order-summary">${esc(order.order_summary)}</div>`;
+        details = `<div class="order-summary">${formatSummaryLines(order.order_summary)}</div>`;
       } else if (order.items && order.items.length) {
         details = `<ul class="item-list">${order.items.map(itemHTML).join('')}</ul>`;
       } else {
@@ -569,8 +614,9 @@
         summary = esc([order.name, order.guests ? `${order.guests} gäster` : '', order.date_time].filter(Boolean).join(' — '));
       }
 
+      const dataOrder = esc(JSON.stringify(order));
       return `
-        <div class="history-item">
+        <div class="history-item" style="cursor:pointer" onclick="openModal(historyOrders.find(o=>o.id==='${esc(order.id)}'))">
           <div class="history-bar ${cls}"></div>
           <div class="history-body">
             <div class="history-meta">
@@ -581,6 +627,73 @@
             <div class="history-content">${summary || '—'}</div>
           </div>
         </div>`;
+    }
+
+    function openModal(order) {
+      if (!order) return;
+      const isBooking = order.type === 'booking';
+      const cls   = isBooking ? 'booking' : 'takeaway';
+      const badge = isBooking ? 'BOKNING' : 'TAKEAWAY';
+
+      let body = '';
+      if (isBooking) {
+        const rows = [];
+        if (order.name)      rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Namn:</span><span>${esc(order.name)}</span></div>`);
+        if (order.guests)    rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Antal gäster:</span><span>${esc(String(order.guests))}</span></div>`);
+        if (order.date_time) rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Datum & tid:</span><span>${esc(order.date_time)}</span></div>`);
+        if (order.notes)     rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Anteckningar:</span><span>${esc(order.notes)}</span></div>`);
+        body = `<div class="modal-booking-grid">${rows.join('')}</div>`;
+      } else if (order.order_summary) {
+        const lines = splitDishes(order.order_summary);
+        body = `<ul class="modal-dishes">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`;
+      } else if (order.items && order.items.length) {
+        body = `<ul class="modal-dishes">${order.items.map(i => `<li>${i.num ? `<strong>#${esc(i.num)}</strong> ` : ''}${esc(i.name)}${i.note ? ` <em style="color:#94A3B8">(${esc(i.note)})</em>` : ''}</li>`).join('')}</ul>`;
+      }
+
+      const phone = order.phone ? `<div class="modal-phone">📞 ${esc(order.phone)}</div>` : '';
+      const time  = order.created_at ? `<div class="modal-time">Inkom: ${new Date(order.created_at).toLocaleString('sv-SE')}</div>` : '';
+
+      const html = `
+        <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+          <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div class="modal-badge ${cls}">${badge}</div>
+            ${phone}
+            ${body}
+            ${time}
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    function closeModal() {
+      const m = document.getElementById('modal-overlay');
+      if (m) m.remove();
+    }
+
+    // Parsar "1x nummer 39 2x nummer 6 ..." till [{qty, num, rest}]
+    function parseSummaryItems(summary) {
+      const results = [];
+      // Matchar: antal + "x" + valfritt "nummer" + siffra + ev. rättnamn inom parentes
+      const re = /(\d+)\s*x\s*(?:nummer\s*)?(\d+)([^0-9x]*?)(?=\d+\s*x|\s*$)/gi;
+      let match;
+      while ((match = re.exec(summary)) !== null) {
+        const qty  = match[1].trim();
+        const num  = match[2].trim();
+        const name = match[3].replace(/[\(\)]/g, '').trim();
+        results.push({ qty, num, name });
+      }
+      return results;
+    }
+
+    function formatSummaryLines(summary) {
+      const items = parseSummaryItems(summary);
+      if (items.length === 0) return esc(summary);
+      return items.map(i => {
+        const label = i.name ? ` <span style="color:var(--muted);font-size:.9rem">(${esc(i.name)})</span>` : '';
+        return `<span class="dish-line"><strong>${esc(i.qty)} x ${esc(i.num)}</strong>${label}</span>`;
+      }).join('');
     }
 
     async function resolveCard(id) {
