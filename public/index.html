@@ -691,8 +691,11 @@
       const items = parseSummaryItems(summary);
       if (items.length === 0) return esc(summary);
       return items.map(i => {
-        const label = i.name ? ` <span style="color:var(--muted);font-size:.9rem">(${esc(i.name)})</span>` : '';
-        return `<span class="dish-line"><strong>${esc(i.qty)} x ${esc(i.num)}</strong>${label}</span>`;
+        // Om namnet är en kort suffix (t.ex. "B", "A", "***") — slå ihop med numret
+        const isSuffix = i.name && i.name.length <= 3;
+        const numStr = isSuffix ? `${esc(i.qty)} x ${esc(i.num)}${esc(i.name)}` : `${esc(i.qty)} x ${esc(i.num)}`;
+        const label  = (!isSuffix && i.name) ? ` <span style="color:var(--muted);font-size:.9rem">(${esc(i.name)})</span>` : '';
+        return `<span class="dish-line"><strong>${numStr}</strong>${label}</span>`;
       }).join('');
     }
 
