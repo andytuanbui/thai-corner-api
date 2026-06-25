@@ -204,6 +204,19 @@ app.post('/api/booking', requireApiKey, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET /api/active-orders-summary
+// ─────────────────────────────────────────────
+app.get('/api/active-orders-summary', requireApiKey, async (req, res) => {
+  try {
+    const summary = await db.getActiveOrdersSummary();
+    res.json(summary);
+  } catch (err) {
+    console.error('Fel i /api/active-orders-summary:', err.message);
+    res.status(500).json({ error: 'Kunde inte hämta sammanfattning' });
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /api/active-orders
 // ─────────────────────────────────────────────
 app.get('/api/active-orders', requireApiKey, async (req, res) => {
