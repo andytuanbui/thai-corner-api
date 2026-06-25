@@ -125,6 +125,40 @@ async function resolveOrder(id) {
 }
 
 /**
+ * Sammanfattning för aktiva takeaway-ordrar.
+ * Returnerar { total_active, sushi_active }.
+ */
+async function getActiveOrdersSummary() {
+  const { rows } = await pool.query(`
+    SELECT items, order_summary FROM orders
+    WHERE status = 'active' AND type = 'takeaway'
+  `);
+
+  const total_active = rows.length;
+
+  const sushiKeywords = /sushi|roll|nigiri|maki/i;
+
+  const sushi_active = rows.filter(row => {
+    // Kolla items-arrayen (strukturerad data)
+    if (row.items) {
+      try {
+        const items = JSON.parse(row.items);
+        if (items.some(item => {
+          const numMatch = item.num && Number(item.num) >= 26 && Number(item.num) <= 71;
+          const nameMatch = item.name && sushiKeywords.test(item.name);
+          return numMatch || nameMatch;
+        })) return true;
+      } catch (_) {}
+    }
+    // Kolla fritext (order_summary)
+    if (row.order_summary && sushiKeywords.test(row.order_summary)) return true;
+    return false;
+  }).length;
+
+  return { total_active, sushi_active };
+}
+
+/**
  * Parsar items-kolumnen från JSON-sträng till objekt.
  */
 function parseRow(row) {
@@ -134,4 +168,4 @@ function parseRow(row) {
   };
 }
 
-module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder };
+module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary };
