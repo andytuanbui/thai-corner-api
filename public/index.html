@@ -695,15 +695,12 @@
         let nameDisplay = '';
 
         if (i.name) {
-          // Kolla om namnet börjar med en variant-bokstav: "A Pad Moo..." → suffix "A", namn "Pad Moo..."
-          const variantMatch = i.name.match(/^([A-Z])\s+(.*)/i);
+          // Kolla om namnet börjar med en variant-bokstav: "A Pad Moo..." → suffix "A"
+          const variantMatch = i.name.match(/^([A-Z])\s+/i);
           if (variantMatch) {
             numDisplay = `${esc(i.qty)} x ${esc(i.num)}${esc(variantMatch[1].toUpperCase())}`;
-            const rest = variantMatch[2].trim();
-            if (rest) nameDisplay = ` <span style="color:var(--muted);font-size:.9rem">(${esc(rest)})</span>`;
-          } else {
-            nameDisplay = ` <span style="color:var(--muted);font-size:.9rem">(${esc(i.name)})</span>`;
           }
+          // Rättnamnet visas inte — bara nummer och variant
         }
 
         return `<span class="dish-line"><strong>${numDisplay}</strong>${nameDisplay}</span>`;
