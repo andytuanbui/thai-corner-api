@@ -204,6 +204,61 @@ app.post('/api/booking', requireApiKey, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET /api/current-time
+// ─────────────────────────────────────────────
+app.get('/api/current-time', requireApiKey, (req, res) => {
+  const TZ = 'Europe/Stockholm';
+  const now = new Date();
+
+  // Tid i Stockholm
+  const fmt = (opts) => new Intl.DateTimeFormat('sv-SE', { timeZone: TZ, ...opts }).format(now);
+
+  const hour   = parseInt(fmt({ hour: 'numeric', hour12: false }), 10);
+  const minute = parseInt(fmt({ minute: 'numeric' }), 10);
+  const dowNum = parseInt(new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(now) === 'Sun' ? 0
+               : ['Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(
+                   new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short' }).format(now)
+                 ) + 1, 10);
+
+  const weekdays = ['söndag','måndag','tisdag','onsdag','torsdag','fredag','lördag'];
+  const weekday  = weekdays[dowNum];
+
+  // Öppettider per veckodag (0=sön, 1=mån, ..., 6=lör)
+  const hours = {
+    0: { opens: '11:30', closes: '21:00' }, // söndag
+    1: { opens: '11:30', closes: '21:00' }, // måndag
+    2: { opens: '11:30', closes: '21:00' }, // tisdag
+    3: { opens: '11:30', closes: '21:00' }, // onsdag
+    4: { opens: '11:30', closes: '21:00' }, // torsdag
+    5: { opens: '11:30', closes: '22:00' }, // fredag
+    6: { opens: '11:30', closes: '22:00' }, // lördag
+  };
+
+  const { opens, closes } = hours[dowNum];
+  const [oH, oM] = opens.split(':').map(Number);
+  const [cH, cM] = closes.split(':').map(Number);
+  const nowMins   = hour * 60 + minute;
+  const is_open   = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
+
+  const timeStr = fmt({ hour: '2-digit', minute: '2-digit', hour12: false });
+  const isoStr  = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: TZ,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'shortOffset',
+  }).format(now).replace(' ', 'T').replace(' ', '');
+
+  res.json({
+    current_datetime: isoStr,
+    weekday,
+    time: timeStr,
+    is_open,
+    opens_at: opens,
+    closes_at: closes,
+  });
+});
+
+// ─────────────────────────────────────────────
 // GET /api/active-orders-summary
 // ─────────────────────────────────────────────
 app.get('/api/active-orders-summary', requireApiKey, async (req, res) => {
