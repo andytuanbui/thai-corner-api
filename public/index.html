@@ -772,17 +772,17 @@
     function parseSummaryItems(summary) {
       const results = [];
       const parts = summary.split(/[\n,]+/);
-      const numberedRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)(.*)/i;
+      // Fångar: "1x nummer 9B***" → qty=1, num="9B***", rest="..."
+      const numberedRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)([A-Za-z]?\*{0,5})(.*)/i;
       const namedRe    = /^(\d+)\s*x\s+([A-Za-zÅÄÖåäö].*)/i;
-      const pickupRe   = /upph[äa]mtning/i;
       for (const part of parts) {
         const p = part.trim();
         if (!p) continue;
         const m1 = p.match(numberedRe);
         if (m1) {
-          // Rensa ev. upphämtningstext ur rättnamnet
-          const rawName = m1[3].replace(/[\(\)]/g, '').replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
-          results.push({ qty: m1[1].trim(), num: m1[2].trim(), name: rawName });
+          const num     = m1[2] + m1[3].toUpperCase(); // ex: "9B***"
+          const rawName = m1[4].replace(/[\(\)]/g, '').replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
+          results.push({ qty: m1[1].trim(), num, name: rawName });
           continue;
         }
         const m2 = p.match(namedRe);
@@ -800,18 +800,10 @@
       const items = parseSummaryItems(summary);
       if (items.length === 0) return esc(summary);
       return items.map(i => {
-        let display;
-        if (i.num) {
-          // Rätt med menynummer: kolla variant-bokstav (ex: "A Pad Moo" → "9A")
-          const variantMatch = i.name && i.name.match(/^([A-Z])\s+/i);
-          const numStr = variantMatch
-            ? `${esc(i.num)}${esc(variantMatch[1].toUpperCase())}`
-            : esc(i.num);
-          display = `${esc(i.qty)} x ${numStr}`;
-        } else {
-          // Rätt utan menynummer (ex: "1x California roll") — visa namn
-          display = `${esc(i.qty)} x ${esc(i.name)}`;
-        }
+        // num innehåller redan variant+stjärnor (ex: "9B***"), name visas inte
+        const display = i.num
+          ? `${esc(i.qty)} x ${esc(i.num)}`
+          : `${esc(i.qty)} x ${esc(i.name)}`;
         return `<span class="dish-line"><strong>${display}</strong></span>`;
       }).join('');
     }
