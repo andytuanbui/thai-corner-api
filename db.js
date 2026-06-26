@@ -133,12 +133,14 @@ async function resolveOrder(id) {
  * Hämtar senaste aktiva ordern för ett telefonnummer.
  */
 async function getActiveOrderByPhone(phone) {
+  // Normalisera: "0046737876786" → "+46737876786", hantera båda format
+  const normalized = phone.startsWith('00') ? '+' + phone.slice(2) : phone;
   const { rows } = await pool.query(`
     SELECT * FROM orders
-    WHERE phone = $1 AND type = 'takeaway' AND status = 'active'
+    WHERE phone IN ($1, $2) AND type = 'takeaway' AND status = 'active'
     ORDER BY created_at DESC
     LIMIT 1
-  `, [phone]);
+  `, [normalized, phone]);
   return rows.length ? parseRow(rows[0]) : null;
 }
 
