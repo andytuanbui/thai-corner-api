@@ -240,6 +240,7 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
   const nowMins   = hour * 60 + minute;
   const is_open         = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
   const next_open_today = !is_open && nowMins < oH * 60 + oM;
+  const status          = is_open ? 'open' : next_open_today ? 'before_opening' : 'closed_for_day';
 
   const timeStr = fmt({ hour: '2-digit', minute: '2-digit', hour12: false });
   const isoStr  = new Intl.DateTimeFormat('sv-SE', {
@@ -255,6 +256,7 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
     time: timeStr,
     is_open,
     next_open_today,
+    status,
     opens_at: opens,
     closes_at: closes,
   });
