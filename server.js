@@ -238,7 +238,8 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
   const [oH, oM] = opens.split(':').map(Number);
   const [cH, cM] = closes.split(':').map(Number);
   const nowMins   = hour * 60 + minute;
-  const is_open   = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
+  const is_open         = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
+  const next_open_today = !is_open && nowMins < oH * 60 + oM;
 
   const timeStr = fmt({ hour: '2-digit', minute: '2-digit', hour12: false });
   const isoStr  = new Intl.DateTimeFormat('sv-SE', {
@@ -253,6 +254,7 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
     weekday,
     time: timeStr,
     is_open,
+    next_open_today,
     opens_at: opens,
     closes_at: closes,
   });
