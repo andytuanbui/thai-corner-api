@@ -277,6 +277,48 @@ app.get('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// PATCH /api/order-by-phone/:phone — Ändra order via telefonnummer
+// Telavox använder {{system__caller_id}} direkt — inget order_id behövs
+// ─────────────────────────────────────────────
+app.patch('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
+  try {
+    const phone = req.params.phone;
+    const { order_summary, notes, date_time } = req.body || {};
+
+    if (!order_summary && !notes && !date_time) {
+      return res.status(400).json({ error: 'Inga fält att uppdatera' });
+    }
+
+    // Hitta senaste aktiva ordern för detta nummer
+    const order = await db.getActiveOrderByPhone(phone);
+    if (!order) {
+      console.warn(`⚠️  PATCH by-phone: ingen aktiv order för ${phone}`);
+      return res.status(404).json({
+        found: false,
+        message: 'Ingen aktiv order hittades för detta telefonnummer',
+      });
+    }
+
+    console.log(`✏️  PATCH order-by-phone/${phone} → order ${order.id} — body:`, JSON.stringify(req.body));
+
+    const updated = await db.updateOrder(order.id, { order_summary, notes, date_time });
+    if (!updated) {
+      return res.status(500).json({ error: 'Kunde inte uppdatera ordern' });
+    }
+
+    console.log(`✅ Order uppdaterad via telefon: ${order.id}`);
+    res.json({
+      success: true,
+      message: 'Ordern har uppdaterats.',
+      order_id: order.id,
+    });
+  } catch (err) {
+    console.error('Fel i PATCH /api/order-by-phone:', err.message);
+    res.status(500).json({ error: 'Kunde inte uppdatera ordern', details: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // PATCH /api/order/:id
 // ─────────────────────────────────────────────
 app.patch('/api/order/:id', requireApiKey, async (req, res) => {
