@@ -151,6 +151,7 @@
       padding: 1rem 1.25rem;
       flex: 1;
       min-width: 0;
+      position: relative;
     }
 
     .card-top {
@@ -276,6 +277,41 @@
       padding: 0.2rem 0.7rem;
       box-shadow: 0 0 10px rgba(129,140,248,0.5);
       white-space: nowrap;
+    }
+
+    /* ── Long-press popup för ÄNDRAD-ordrar ── */
+    .prev-popup {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 200;
+      background: #1a1a2e;
+      border: 1px solid var(--modified);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      min-width: 220px;
+      max-width: 320px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      pointer-events: none;
+      animation: fadeInPop 0.15s ease;
+    }
+    .prev-popup-label {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--modified);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+    }
+    .prev-popup-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    @keyframes fadeInPop {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
     .modified-badge {
@@ -597,13 +633,23 @@
         ? (order.date_time || extractPickupTime(order.order_summary))
         : null;
 
+      const prevSummaryAttr = (order.was_modified && order.previous_summary)
+        ? `data-prev="${esc(order.previous_summary)}"`
+        : '';
+
       return `
         <div class="card"
              id="card-${esc(order.id)}"
              data-id="${esc(order.id)}"
              data-last-tap="0"
+             ${prevSummaryAttr}
              ondblclick="resolveCard('${esc(order.id)}')"
-             ontouchend="handleTouchEnd(event, '${esc(order.id)}')">
+             ontouchend="handleTouchEnd(event, '${esc(order.id)}')"
+             onmousedown="startLongPress(event, '${esc(order.id)}', this.dataset.prev)"
+             onmouseup="clearLongPress('${esc(order.id)}')"
+             onmouseleave="clearLongPress('${esc(order.id)}')"
+             ontouchstart="startLongPress(event, '${esc(order.id)}', this.dataset.prev)"
+             ontouchcancel="clearLongPress('${esc(order.id)}')" >
           <div class="card-bar ${cls}"></div>
           <div class="card-body">
             <div class="card-top">
@@ -793,6 +839,8 @@
     function handleTouchEnd(e, id) {
       const el = document.getElementById(`card-${id}`);
       if (!el) return;
+      // Avbryt long-press om det pågår
+      clearLongPress(id);
       const now = Date.now();
       const lastTap = parseInt(el.dataset.lastTap || '0', 10);
       if (now - lastTap < 450) {
@@ -802,6 +850,45 @@
       } else {
         el.dataset.lastTap = String(now);
       }
+    }
+
+    // ── Long-press för att visa tidigare order (ÄNDRAD-kort) ──
+    const _lpTimers = {};
+
+    function startLongPress(e, id, prevSummary) {
+      if (!prevSummary) return;
+      // Ignorera högerklick
+      if (e.button !== undefined && e.button !== 0) return;
+      _lpTimers[id] = setTimeout(() => {
+        showPrevPopup(id, prevSummary);
+      }, 450);
+    }
+
+    function clearLongPress(id) {
+      clearTimeout(_lpTimers[id]);
+      delete _lpTimers[id];
+      hidePrevPopup(id);
+    }
+
+    function showPrevPopup(id, prevSummary) {
+      hidePrevPopup(id); // ta bort ev. gammal
+      const cardBody = document.querySelector(`#card-${id} .card-body`);
+      if (!cardBody) return;
+      const popup = document.createElement('div');
+      popup.className = 'prev-popup';
+      popup.id = `prev-popup-${id}`;
+      // Formatera previous_summary snyggt med radbrytning per rätt
+      const lines = prevSummary.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+      popup.innerHTML = `
+        <div class="prev-popup-label">📋 Tidigare order</div>
+        <div class="prev-popup-text">${lines.map(esc).join('\n')}</div>
+      `;
+      cardBody.appendChild(popup);
+    }
+
+    function hidePrevPopup(id) {
+      const el = document.getElementById(`prev-popup-${id}`);
+      if (el) el.remove();
     }
 
     function timeAgo(iso) {
