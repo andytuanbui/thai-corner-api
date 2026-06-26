@@ -696,16 +696,18 @@
       if (m) m.remove();
     }
 
-    // Parsar "1x nummer 39 2x nummer 6 ..." till [{qty, num, rest}]
+    // Parsar "1x nummer 27 (Yang Thod), 1x nummer 34 (Satay Goong)" → [{qty, num, name}]
+    // Delar på komma för att hantera klockslag/extra text i slutet (ex: "Upphämtning: 20:05")
     function parseSummaryItems(summary) {
       const results = [];
-      // Matchar: antal + "x" + valfritt "nummer" + siffra + ev. rättnamn inom parentes
-      const re = /(\d+)\s*x\s*(?:nummer\s*)?(\d+)([^0-9x]*?)(?=\d+\s*x|\s*$)/gi;
-      let match;
-      while ((match = re.exec(summary)) !== null) {
-        const qty  = match[1].trim();
-        const num  = match[2].trim();
-        const name = match[3].replace(/[\(\)]/g, '').trim();
+      const segmentRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)(.*)/i;
+      const parts = summary.split(/,\s*/);
+      for (const part of parts) {
+        const m = part.trim().match(segmentRe);
+        if (!m) continue;
+        const qty  = m[1].trim();
+        const num  = m[2].trim();
+        const name = m[3].replace(/[\(\)]/g, '').trim();
         results.push({ qty, num, name });
       }
       return results;
