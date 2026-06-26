@@ -263,6 +263,43 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// GET /api/order-by-phone/:phone
+// ─────────────────────────────────────────────
+app.get('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
+  try {
+    const order = await db.getActiveOrderByPhone(req.params.phone);
+    if (!order) return res.status(404).json({ found: false, message: 'Ingen aktiv order hittades för detta nummer' });
+    res.json({ found: true, order });
+  } catch (err) {
+    console.error('Fel i /api/order-by-phone:', err.message);
+    res.status(500).json({ error: 'Kunde inte hämta order' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// PATCH /api/order/:id
+// ─────────────────────────────────────────────
+app.patch('/api/order/:id', requireApiKey, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { items, order_summary, notes, date_time } = req.body || {};
+
+    if (!items && !order_summary && !notes && !date_time) {
+      return res.status(400).json({ error: 'Inga fält att uppdatera' });
+    }
+
+    const updated = await db.updateOrder(id, { items, order_summary, notes, date_time });
+    if (!updated) return res.status(404).json({ error: `Hittade ingen aktiv order med id: ${id}` });
+
+    console.log(`✏️  Order uppdaterad: ${id}`);
+    res.json({ success: true, message: 'Ordern har uppdaterats.' });
+  } catch (err) {
+    console.error('Fel i PATCH /api/order:', err.message);
+    res.status(500).json({ error: 'Kunde inte uppdatera ordern' });
+  }
+});
+
+// ─────────────────────────────────────────────
 // GET /api/active-orders-summary
 // ─────────────────────────────────────────────
 app.get('/api/active-orders-summary', requireApiKey, async (req, res) => {
