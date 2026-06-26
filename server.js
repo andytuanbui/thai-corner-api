@@ -301,7 +301,9 @@ app.patch('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
 
     console.log(`✏️  PATCH order-by-phone/${phone} → order ${order.id} — body:`, JSON.stringify(req.body));
 
-    const updated = await db.updateOrder(order.id, { order_summary, notes, date_time });
+    // Spara gamla order_summary som previous_summary (om den inte redan är satt)
+    const previous_summary = order.previous_summary || order.order_summary || null;
+    const updated = await db.updateOrder(order.id, { order_summary, notes, date_time, previous_summary });
     if (!updated) {
       return res.status(500).json({ error: 'Kunde inte uppdatera ordern' });
     }
