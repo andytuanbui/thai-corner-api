@@ -42,19 +42,24 @@ async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
       id            TEXT    PRIMARY KEY,
-      type          TEXT    NOT NULL,          -- 'takeaway' | 'booking'
+      type          TEXT    NOT NULL,
       phone         TEXT,
-      items         TEXT,                      -- JSON: [{name, num, note}]
-      order_summary TEXT,                      -- Fri text (Telavox-format)
-      guests        INTEGER,
+      items         TEXT,
+      order_summary TEXT,
+      guests        TEXT,
       date_time     TEXT,
       name          TEXT,
       notes         TEXT,
-      status        TEXT    NOT NULL DEFAULT 'active',  -- 'active' | 'resolved'
+      status        TEXT    NOT NULL DEFAULT 'active',
       created_at    TEXT    NOT NULL,
-      resolved_at   TEXT
+      resolved_at   TEXT,
+      updated_at    TEXT,
+      was_modified  BOOLEAN NOT NULL DEFAULT false
     )
   `);
+  // Lägg till kolumner om de saknas (för befintliga databaser)
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at   TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS was_modified BOOLEAN NOT NULL DEFAULT false`);
   console.log('✅  Databas: schema OK');
 }
 
@@ -125,6 +130,46 @@ async function resolveOrder(id) {
 }
 
 /**
+ * Hämtar senaste aktiva ordern för ett telefonnummer.
+ */
+async function getActiveOrderByPhone(phone) {
+  const { rows } = await pool.query(`
+    SELECT * FROM orders
+    WHERE phone = $1 AND type = 'takeaway' AND status = 'active'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [phone]);
+  return rows.length ? parseRow(rows[0]) : null;
+}
+
+/**
+ * Uppdaterar en befintlig order (items, order_summary, notes, date_time).
+ */
+async function updateOrder(id, updates) {
+  const now = new Date().toISOString();
+  const fields = [];
+  const values = [];
+  let idx = 1;
+
+  if (updates.items !== undefined)         { fields.push(`items = $${idx++}`);         values.push(JSON.stringify(updates.items)); }
+  if (updates.order_summary !== undefined) { fields.push(`order_summary = $${idx++}`); values.push(updates.order_summary); }
+  if (updates.notes !== undefined)         { fields.push(`notes = $${idx++}`);         values.push(updates.notes); }
+  if (updates.date_time !== undefined)     { fields.push(`date_time = $${idx++}`);     values.push(updates.date_time); }
+
+  if (fields.length === 0) return false;
+
+  fields.push(`updated_at = $${idx++}`);   values.push(now);
+  fields.push(`was_modified = $${idx++}`); values.push(true);
+  values.push(id);
+
+  const { rowCount } = await pool.query(
+    `UPDATE orders SET ${fields.join(', ')} WHERE id = $${idx} AND status = 'active'`,
+    values
+  );
+  return rowCount > 0;
+}
+
+/**
  * Sammanfattning för aktiva takeaway-ordrar.
  * Returnerar { total_active, sushi_active }.
  */
@@ -168,4 +213,4 @@ function parseRow(row) {
   };
 }
 
-module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary };
+module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary, getActiveOrderByPhone, updateOrder };
