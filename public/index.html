@@ -696,19 +696,29 @@
       if (m) m.remove();
     }
 
-    // Parsar "1x nummer 27 (Yang Thod), 1x nummer 34 (Satay Goong)" → [{qty, num, name}]
-    // Delar på komma för att hantera klockslag/extra text i slutet (ex: "Upphämtning: 20:05")
+    // Parsar order_summary till [{qty, num, name}]
+    // Hanterar: komma- och/eller radbrytningsseparation, menynummer saknas (ex: "1x California roll")
     function parseSummaryItems(summary) {
       const results = [];
-      const segmentRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)(.*)/i;
-      const parts = summary.split(/,\s*/);
+      // Dela på komma OCH radbrytning
+      const parts = summary.split(/[\n,]+/);
+      // Mönster 1: "1x nummer 34 (Satay Goong)" eller "1x 34 (Satay Goong)"
+      const numberedRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)(.*)/i;
+      // Mönster 2: "1x California roll" (ingen siffra som rättnummer)
+      const namedRe    = /^(\d+)\s*x\s+([A-Za-zÅÄÖåäö].*)/i;
       for (const part of parts) {
-        const m = part.trim().match(segmentRe);
-        if (!m) continue;
-        const qty  = m[1].trim();
-        const num  = m[2].trim();
-        const name = m[3].replace(/[\(\)]/g, '').trim();
-        results.push({ qty, num, name });
+        const p = part.trim();
+        if (!p) continue;
+        const m1 = p.match(numberedRe);
+        if (m1) {
+          results.push({ qty: m1[1].trim(), num: m1[2].trim(), name: m1[3].replace(/[\(\)]/g, '').trim() });
+          continue;
+        }
+        const m2 = p.match(namedRe);
+        if (m2) {
+          results.push({ qty: m2[1].trim(), num: null, name: m2[2].replace(/[\(\)]/g, '').trim() });
+        }
+        // Allt annat (ex: "Upphämtning klockan 20:05") hoppas över
       }
       return results;
     }
@@ -717,19 +727,19 @@
       const items = parseSummaryItems(summary);
       if (items.length === 0) return esc(summary);
       return items.map(i => {
-        let numDisplay = `${esc(i.qty)} x ${esc(i.num)}`;
-        let nameDisplay = '';
-
-        if (i.name) {
-          // Kolla om namnet börjar med en variant-bokstav: "A Pad Moo..." → suffix "A"
-          const variantMatch = i.name.match(/^([A-Z])\s+/i);
-          if (variantMatch) {
-            numDisplay = `${esc(i.qty)} x ${esc(i.num)}${esc(variantMatch[1].toUpperCase())}`;
-          }
-          // Rättnamnet visas inte — bara nummer och variant
+        let display;
+        if (i.num) {
+          // Rätt med menynummer: kolla variant-bokstav (ex: "A Pad Moo" → "9A")
+          const variantMatch = i.name && i.name.match(/^([A-Z])\s+/i);
+          const numStr = variantMatch
+            ? `${esc(i.num)}${esc(variantMatch[1].toUpperCase())}`
+            : esc(i.num);
+          display = `${esc(i.qty)} x ${numStr}`;
+        } else {
+          // Rätt utan menynummer (ex: "1x California roll") — visa namn
+          display = `${esc(i.qty)} x ${esc(i.name)}`;
         }
-
-        return `<span class="dish-line"><strong>${numDisplay}</strong>${nameDisplay}</span>`;
+        return `<span class="dish-line"><strong>${display}</strong></span>`;
       }).join('');
     }
 
