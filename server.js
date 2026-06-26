@@ -33,7 +33,7 @@ const API_KEY = process.env.API_KEY;
 // ─────────────────────────────────────────────
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
+  methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
 }));
 
@@ -282,20 +282,39 @@ app.get('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
 app.patch('/api/order/:id', requireApiKey, async (req, res) => {
   try {
     const { id } = req.params;
-    const { items, order_summary, notes, date_time } = req.body || {};
+    const { items, notes, date_time } = req.body || {};
+    let { order_summary } = req.body || {};
 
     if (!items && !order_summary && !notes && !date_time) {
       return res.status(400).json({ error: 'Inga fält att uppdatera' });
     }
 
-    const updated = await db.updateOrder(id, { items, order_summary, notes, date_time });
-    if (!updated) return res.status(404).json({ error: `Hittade ingen aktiv order med id: ${id}` });
+    // Om items skickas men order_summary saknas — bygg en ny summary automatiskt
+    // så att dashboarden alltid visar rätt innehåll
+    if (items && !order_summary) {
+      if (Array.isArray(items)) {
+        order_summary = items.map(i => {
+          const qty = i.qty || i.quantity || 1;
+          const num = i.num || i.number || i.id || '?';
+          const variant = i.variant || '';
+          return `${qty} x nummer ${num}${variant}`;
+        }).join(', ');
+      }
+    }
 
-    console.log(`✏️  Order uppdaterad: ${id}`);
+    console.log(`✏️  PATCH /api/order/${id} — body:`, JSON.stringify(req.body));
+
+    const updated = await db.updateOrder(id, { items, order_summary, notes, date_time });
+    if (!updated) {
+      console.warn(`⚠️  PATCH: ingen aktiv order hittades med id=${id}`);
+      return res.status(404).json({ error: `Hittade ingen aktiv order med id: ${id}` });
+    }
+
+    console.log(`✅ Order uppdaterad: ${id}`);
     res.json({ success: true, message: 'Ordern har uppdaterats.' });
   } catch (err) {
     console.error('Fel i PATCH /api/order:', err.message);
-    res.status(500).json({ error: 'Kunde inte uppdatera ordern' });
+    res.status(500).json({ error: 'Kunde inte uppdatera ordern', details: err.message });
   }
 });
 
