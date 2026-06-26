@@ -260,6 +260,18 @@
     .booking-row { display: flex; gap: 0.5rem; font-size: 0.95rem; }
     .booking-label { color: var(--muted); min-width: 95px; flex-shrink: 0; }
 
+    .modified-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      background: rgba(234,179,8,0.18);
+      color: #EAB308;
+      border: 1px solid rgba(234,179,8,0.45);
+      flex-shrink: 0;
+    }
+
     .card-hint {
       color: var(--muted);
       font-size: 0.72rem;
@@ -567,6 +579,7 @@
           <div class="card-body">
             <div class="card-top">
               <span class="type-badge ${cls}">${badge}</span>
+              ${order.was_modified ? '<span class="modified-badge">✏ ÄNDRAD</span>' : ''}
               <span class="card-age" data-created="${esc(order.created_at)}">${timeAgo(order.created_at)}</span>
             </div>
             ${phone}
