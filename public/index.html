@@ -883,10 +883,9 @@
       popup.style.width = rect.width + 'px';
       popup.style.zIndex = '1000';
 
-      const lines = prevSummary.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
       popup.innerHTML = `
         <div class="prev-popup-label">📋 Tidigare order</div>
-        <div class="prev-popup-text">${lines.map(esc).join('\n')}</div>
+        <div class="prev-popup-text">${formatSummaryLines(prevSummary)}</div>
       `;
       document.body.appendChild(popup);
     }
