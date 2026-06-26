@@ -58,8 +58,9 @@ async function initDb() {
     )
   `);
   // Lägg till kolumner om de saknas (för befintliga databaser)
-  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at   TEXT`);
-  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS was_modified BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at        TEXT`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS was_modified      BOOLEAN NOT NULL DEFAULT false`);
+  await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS previous_summary  TEXT`);
   console.log('✅  Databas: schema OK');
 }
 
@@ -153,10 +154,11 @@ async function updateOrder(id, updates) {
   const values = [];
   let idx = 1;
 
-  if (updates.items !== undefined)         { fields.push(`items = $${idx++}`);         values.push(JSON.stringify(updates.items)); }
-  if (updates.order_summary !== undefined) { fields.push(`order_summary = $${idx++}`); values.push(updates.order_summary); }
-  if (updates.notes !== undefined)         { fields.push(`notes = $${idx++}`);         values.push(updates.notes); }
-  if (updates.date_time !== undefined)     { fields.push(`date_time = $${idx++}`);     values.push(updates.date_time); }
+  if (updates.items !== undefined)            { fields.push(`items = $${idx++}`);            values.push(JSON.stringify(updates.items)); }
+  if (updates.order_summary !== undefined)   { fields.push(`order_summary = $${idx++}`);   values.push(updates.order_summary); }
+  if (updates.previous_summary !== undefined){ fields.push(`previous_summary = $${idx++}`); values.push(updates.previous_summary); }
+  if (updates.notes !== undefined)           { fields.push(`notes = $${idx++}`);            values.push(updates.notes); }
+  if (updates.date_time !== undefined)       { fields.push(`date_time = $${idx++}`);        values.push(updates.date_time); }
 
   if (fields.length === 0) return false;
 
