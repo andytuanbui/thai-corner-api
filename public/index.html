@@ -281,10 +281,7 @@
 
     /* ── Long-press popup för ÄNDRAD-ordrar ── */
     .prev-popup {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      z-index: 200;
+      z-index: 1000;
       background: #1a1a2e;
       border: 1px solid var(--modified);
       border-radius: 8px;
@@ -871,19 +868,27 @@
     }
 
     function showPrevPopup(id, prevSummary) {
-      hidePrevPopup(id); // ta bort ev. gammal
-      const cardBody = document.querySelector(`#card-${id} .card-body`);
-      if (!cardBody) return;
+      hidePrevPopup(id);
+      const card = document.getElementById(`card-${id}`);
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+
       const popup = document.createElement('div');
       popup.className = 'prev-popup';
       popup.id = `prev-popup-${id}`;
-      // Formatera previous_summary snyggt med radbrytning per rätt
+      // Positionera med fixed så overflow:hidden på kortet inte klipper
+      popup.style.position = 'fixed';
+      popup.style.top  = (rect.bottom + 6) + 'px';
+      popup.style.left = rect.left + 'px';
+      popup.style.width = rect.width + 'px';
+      popup.style.zIndex = '1000';
+
       const lines = prevSummary.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
       popup.innerHTML = `
         <div class="prev-popup-label">📋 Tidigare order</div>
         <div class="prev-popup-text">${lines.map(esc).join('\n')}</div>
       `;
-      cardBody.appendChild(popup);
+      document.body.appendChild(popup);
     }
 
     function hidePrevPopup(id) {
