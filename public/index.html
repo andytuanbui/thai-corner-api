@@ -10,8 +10,10 @@
       --surface:      #1E293B;
       --surface-hi:   #263548;
       --border:       #334155;
-      --takeaway:     #F97316;
-      --booking:      #EF4444;
+      --takeaway:     #22C55E;   /* Grön    — ny takeaway */
+      --booking:      #EF4444;   /* Röd     — bordsbokning */
+      --modified:     #F97316;   /* Orange  — ändrad order */
+      --timed:        #818CF8;   /* Lila    — upphämtning senare */
       --text:         #F1F5F9;
       --muted:        #94A3B8;
       --green:        #22C55E;
@@ -142,6 +144,8 @@
     .card-bar { width: 7px; flex-shrink: 0; }
     .card-bar.takeaway { background: var(--takeaway); }
     .card-bar.booking  { background: var(--booking); }
+    .card-bar.modified { background: var(--modified); }
+    .card-bar.timed    { background: var(--timed); }
 
     .card-body {
       padding: 1rem 1.25rem;
@@ -553,7 +557,13 @@
 
     function cardHTML(order) {
       const isBooking = order.type === 'booking';
-      const cls   = isBooking ? 'booking' : 'takeaway';
+      // Bestäm färgklass för vänsterkanten
+      let cls;
+      if (isBooking)              cls = 'booking';
+      else if (order.was_modified) cls = 'modified';
+      else if (order.date_time)    cls = 'timed';
+      else                         cls = 'takeaway';
+
       const badge = isBooking ? 'BOKNING' : 'TAKEAWAY';
       const phone = order.phone ? `<div class="card-phone">📞 ${esc(order.phone)}</div>` : '';
 
@@ -583,6 +593,7 @@
               <span class="card-age" data-created="${esc(order.created_at)}">${timeAgo(order.created_at)}</span>
             </div>
             ${phone}
+            ${order.date_time && !isBooking ? `<div style="color:var(--timed);font-weight:700;font-size:0.95rem;margin-bottom:0.5rem">🕐 HÄMTAS: ${esc(order.date_time)}</div>` : ''}
             ${details}
             <div class="card-hint">Dubbelklicka (eller dubbeltryck) för att markera som klar</div>
           </div>
