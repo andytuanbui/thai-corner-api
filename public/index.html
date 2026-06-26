@@ -264,6 +264,20 @@
     .booking-row { display: flex; gap: 0.5rem; font-size: 0.95rem; }
     .booking-label { color: var(--muted); min-width: 95px; flex-shrink: 0; }
 
+    .pickup-chip {
+      flex: 1;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: #fff;
+      background: var(--timed);
+      border-radius: 6px;
+      padding: 0.2rem 0.7rem;
+      box-shadow: 0 0 10px rgba(129,140,248,0.5);
+      white-space: nowrap;
+    }
+
     .modified-badge {
       font-size: 0.65rem;
       font-weight: 800;
@@ -578,6 +592,11 @@
         details = `<span style="color:var(--muted);font-size:.9rem">Ingen detaljerad information</span>`;
       }
 
+      // Upphämtningstid: antingen från date_time-fältet eller extraherat ur order_summary
+      const pickupTime = !isBooking
+        ? (order.date_time || extractPickupTime(order.order_summary))
+        : null;
+
       return `
         <div class="card"
              id="card-${esc(order.id)}"
@@ -590,10 +609,10 @@
             <div class="card-top">
               <span class="type-badge ${cls}">${badge}</span>
               ${order.was_modified ? '<span class="modified-badge">✏ ÄNDRAD</span>' : ''}
+              ${pickupTime ? `<span class="pickup-chip">🕐 HÄMTAS ${esc(pickupTime)}</span>` : ''}
               <span class="card-age" data-created="${esc(order.created_at)}">${timeAgo(order.created_at)}</span>
             </div>
             ${phone}
-            ${order.date_time && !isBooking ? `<div style="color:var(--timed);font-weight:700;font-size:0.95rem;margin-bottom:0.5rem">🕐 HÄMTAS: ${esc(order.date_time)}</div>` : ''}
             ${details}
             <div class="card-hint">Dubbelklicka (eller dubbeltryck) för att markera som klar</div>
           </div>
@@ -696,29 +715,38 @@
       if (m) m.remove();
     }
 
+    // Extraherar upphämtningstid ur order_summary, t.ex. "Upphämtning klockan 20:05" → "20:05"
+    function extractPickupTime(summary) {
+      if (!summary) return null;
+      const m = summary.match(/upph[äa]mtning(?:\s+klockan)?\s*:?\s*(\d{1,2}[:.]\d{2})/i);
+      return m ? m[1].replace('.', ':') : null;
+    }
+
     // Parsar order_summary till [{qty, num, name}]
-    // Hanterar: komma- och/eller radbrytningsseparation, menynummer saknas (ex: "1x California roll")
+    // Hanterar: komma- och/eller radbrytningsseparation, rätter utan menynummer (ex: "1x California roll")
     function parseSummaryItems(summary) {
       const results = [];
-      // Dela på komma OCH radbrytning
       const parts = summary.split(/[\n,]+/);
-      // Mönster 1: "1x nummer 34 (Satay Goong)" eller "1x 34 (Satay Goong)"
       const numberedRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)(.*)/i;
-      // Mönster 2: "1x California roll" (ingen siffra som rättnummer)
       const namedRe    = /^(\d+)\s*x\s+([A-Za-zÅÄÖåäö].*)/i;
+      const pickupRe   = /upph[äa]mtning/i;
       for (const part of parts) {
         const p = part.trim();
         if (!p) continue;
         const m1 = p.match(numberedRe);
         if (m1) {
-          results.push({ qty: m1[1].trim(), num: m1[2].trim(), name: m1[3].replace(/[\(\)]/g, '').trim() });
+          // Rensa ev. upphämtningstext ur rättnamnet
+          const rawName = m1[3].replace(/[\(\)]/g, '').replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
+          results.push({ qty: m1[1].trim(), num: m1[2].trim(), name: rawName });
           continue;
         }
         const m2 = p.match(namedRe);
         if (m2) {
-          results.push({ qty: m2[1].trim(), num: null, name: m2[2].replace(/[\(\)]/g, '').trim() });
+          const rawName = m2[2].replace(/[\(\)]/g, '').replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
+          results.push({ qty: m2[1].trim(), num: null, name: rawName });
+          continue;
         }
-        // Allt annat (ex: "Upphämtning klockan 20:05") hoppas över
+        // Rader som bara är upphämtningsinfo eller okänt format → hoppa över
       }
       return results;
     }
