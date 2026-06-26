@@ -657,7 +657,7 @@
             </div>
             ${phone}
             ${details}
-            <div class="card-hint">Dubbelklicka (eller dubbeltryck) för att markera som klar</div>
+            <div class="card-hint">${order.was_modified && order.previous_summary ? 'Håll ner för att se tidigare beställning' : 'Dubbelklicka (eller dubbeltryck) för att markera som klar'}</div>
           </div>
         </div>`;
     }
