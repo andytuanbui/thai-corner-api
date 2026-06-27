@@ -693,7 +693,7 @@
       const barCls     = isBooking ? 'booking' : isModified ? 'modified' : 'takeaway';
       const badge      = isBooking ? 'BOKNING' : 'TAKEAWAY';
       const phone      = order.phone ? `📞 ${esc(order.phone)}` : '';
-      const resolvedStr = order.resolved_at ? `Klar ${timeAgo(order.resolved_at)}` : '';
+      const resolvedStr = order.resolved_at ? `Skickat till köket ${timeAgo(order.resolved_at)}` : '';
 
       let summary = '';
       if (order.order_summary) {
