@@ -714,6 +714,7 @@
 
       return `
         <div class="history-item"
+             id="card-${lpId}"
              style="cursor:pointer; position:relative"
              ${prevAttr}
              onclick="openModal(historyOrders.find(o=>o.id==='${esc(order.id)}'))"
