@@ -230,8 +230,8 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
     2: { opens: '11:30', closes: '21:00' }, // tisdag
     3: { opens: '11:30', closes: '21:00' }, // onsdag
     4: { opens: '11:30', closes: '21:00' }, // torsdag
-    5: { opens: '11:30', closes: '24:00' }, // fredag
-    6: { opens: '11:30', closes: '24:00' }, // lördag
+    5: { opens: '11:30', closes: '22:00' }, // fredag
+    6: { opens: '11:30', closes: '22:00' }, // lördag
   };
 
   const { opens, closes } = hours[dowNum];
