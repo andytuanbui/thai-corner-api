@@ -353,6 +353,7 @@
     }
     .history-bar.takeaway { background: var(--takeaway); }
     .history-bar.booking  { background: var(--booking); }
+    .history-bar.modified { background: var(--modified); }
 
     .history-body { flex: 1; min-width: 0; }
 
@@ -687,32 +688,51 @@
     }
 
     function historyItemHTML(order) {
-      const isBooking = order.type === 'booking';
-      const cls   = isBooking ? 'booking' : 'takeaway';
-      const badge = isBooking ? 'BOKNING'  : 'TAKEAWAY';
-      const phone = order.phone ? `📞 ${esc(order.phone)}` : '';
+      const isBooking  = order.type === 'booking';
+      const isModified = !isBooking && order.was_modified;
+      const barCls     = isBooking ? 'booking' : isModified ? 'modified' : 'takeaway';
+      const badge      = isBooking ? 'BOKNING' : 'TAKEAWAY';
+      const phone      = order.phone ? `📞 ${esc(order.phone)}` : '';
       const resolvedStr = order.resolved_at ? `Klar ${timeAgo(order.resolved_at)}` : '';
 
       let summary = '';
       if (order.order_summary) {
-        summary = esc(order.order_summary);
+        summary = formatSummaryLines(order.order_summary);
       } else if (order.items && order.items.length) {
         summary = esc(order.items.map(i => [i.num ? `#${i.num}` : '', i.name, i.note ? `(${i.note})` : ''].filter(Boolean).join(' ')).join(' · '));
       } else if (isBooking) {
         summary = esc([order.name, order.guests ? `${order.guests} gäster` : '', order.date_time].filter(Boolean).join(' — '));
       }
 
-      const dataOrder = esc(JSON.stringify(order));
+      const prevAttr = (isModified && order.previous_summary)
+        ? `data-prev="${esc(order.previous_summary)}"`
+        : '';
+      const hint = (isModified && order.previous_summary)
+        ? 'Håll ner för att se tidigare beställning'
+        : 'Klicka för att se detaljer';
+      const lpId = `h-${order.id}`;
+
       return `
-        <div class="history-item" style="cursor:pointer" onclick="openModal(historyOrders.find(o=>o.id==='${esc(order.id)}'))">
-          <div class="history-bar ${cls}"></div>
+        <div class="history-item"
+             style="cursor:pointer; position:relative"
+             ${prevAttr}
+             onclick="openModal(historyOrders.find(o=>o.id==='${esc(order.id)}'))"
+             onmousedown="startLongPress(event,'${lpId}',this.dataset.prev)"
+             onmouseup="clearLongPress('${lpId}')"
+             onmouseleave="clearLongPress('${lpId}')"
+             ontouchstart="startLongPress(event,'${lpId}',this.dataset.prev)"
+             ontouchend="clearLongPress('${lpId}')"
+             ontouchcancel="clearLongPress('${lpId}')">
+          <div class="history-bar ${barCls}"></div>
           <div class="history-body">
             <div class="history-meta">
-              <span class="htype">${badge}</span>
+              <span class="htype" style="${isModified ? 'color:var(--modified)' : ''}">${badge}</span>
+              ${isModified ? '<span class="modified-badge">✏ ÄNDRAD</span>' : ''}
               ${phone ? `<span>${phone}</span>` : ''}
               ${resolvedStr ? `<span>${resolvedStr}</span>` : ''}
             </div>
-            <div class="history-content">${summary || '—'}</div>
+            <div class="history-content order-summary">${summary || '—'}</div>
+            <div class="card-hint" style="margin-top:0.4rem">${hint}</div>
           </div>
         </div>`;
     }
