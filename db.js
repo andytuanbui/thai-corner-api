@@ -134,11 +134,25 @@ async function resolveOrder(id) {
  * Hämtar senaste aktiva ordern för ett telefonnummer.
  */
 async function getActiveOrderByPhone(phone) {
-  // Normalisera: "0046737876786" → "+46737876786", hantera båda format
   const normalized = phone.startsWith('00') ? '+' + phone.slice(2) : phone;
   const { rows } = await pool.query(`
     SELECT * FROM orders
     WHERE phone IN ($1, $2) AND type = 'takeaway' AND status = 'active'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `, [normalized, phone]);
+  return rows.length ? parseRow(rows[0]) : null;
+}
+
+/**
+ * Hämtar senaste ordern för ett telefonnummer oavsett status (active eller resolved).
+ * Används av PATCH-by-phone för att kunna återaktivera en redan klarmarkerad order.
+ */
+async function getLatestOrderByPhone(phone) {
+  const normalized = phone.startsWith('00') ? '+' + phone.slice(2) : phone;
+  const { rows } = await pool.query(`
+    SELECT * FROM orders
+    WHERE phone IN ($1, $2) AND type = 'takeaway'
     ORDER BY created_at DESC
     LIMIT 1
   `, [normalized, phone]);
@@ -164,10 +178,17 @@ async function updateOrder(id, updates) {
 
   fields.push(`updated_at = $${idx++}`);   values.push(now);
   fields.push(`was_modified = $${idx++}`); values.push(true);
+
+  // Återaktivera om ordern är resolved
+  if (updates.reactivate) {
+    fields.push(`status = $${idx++}`);      values.push('active');
+    fields.push(`resolved_at = $${idx++}`); values.push(null);
+  }
+
   values.push(id);
 
   const { rowCount } = await pool.query(
-    `UPDATE orders SET ${fields.join(', ')} WHERE id = $${idx} AND status = 'active'`,
+    `UPDATE orders SET ${fields.join(', ')} WHERE id = $${idx}`,
     values
   );
   return rowCount > 0;
@@ -217,4 +238,4 @@ function parseRow(row) {
   };
 }
 
-module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary, getActiveOrderByPhone, updateOrder };
+module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary, getActiveOrderByPhone, getLatestOrderByPhone, updateOrder };
