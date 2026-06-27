@@ -801,9 +801,12 @@
         if (!p) continue;
         const m1 = p.match(numberedRe);
         if (m1) {
-          const num     = m1[2] + m1[3].toUpperCase(); // ex: "9B***"
-          const rawName = m1[4].replace(/[\(\)]/g, '').replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
-          results.push({ qty: m1[1].trim(), num, name: rawName });
+          const base = m1[2] + m1[3].toUpperCase(); // ex: "9B***"
+          const rest = m1[4].replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
+          // Bevara parentesnotering direkt efter numret, ex: "(extra stärkt)"
+          const parenMatch = rest.match(/^(\([^)]+\))/);
+          const num = parenMatch ? `${base} ${parenMatch[1]}` : base;
+          results.push({ qty: m1[1].trim(), num, name: '' });
           continue;
         }
         const m2 = p.match(namedRe);
