@@ -289,23 +289,31 @@ app.patch('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
       return res.status(400).json({ error: 'Inga fält att uppdatera' });
     }
 
-    // Hitta senaste aktiva ordern för detta nummer
-    const order = await db.getActiveOrderByPhone(phone);
+    // Hitta senaste ordern oavsett status (active eller resolved)
+    const order = await db.getLatestOrderByPhone(phone);
     if (!order) {
-      console.warn(`⚠️  PATCH by-phone: ingen aktiv order för ${phone}`);
+      console.warn(`⚠️  PATCH by-phone: ingen order hittad för ${phone}`);
       return res.status(404).json({
         found: false,
-        message: 'Ingen aktiv order hittades för detta telefonnummer',
+        message: 'Ingen order hittades för detta telefonnummer',
       });
     }
 
-    console.log(`✏️  PATCH order-by-phone/${phone} → order ${order.id} — body:`, JSON.stringify(req.body));
+    const wasResolved = order.status === 'resolved';
+    console.log(`✏️  PATCH order-by-phone/${phone} → order ${order.id} (${order.status}) — body:`, JSON.stringify(req.body));
 
     // Spara gamla order_summary som previous_summary (om den inte redan är satt)
     const previous_summary = order.previous_summary || order.order_summary || null;
-    const updated = await db.updateOrder(order.id, { order_summary, notes, date_time, previous_summary });
+    const updated = await db.updateOrder(order.id, {
+      order_summary, notes, date_time, previous_summary,
+      reactivate: wasResolved,   // återaktivera om den låg i historiken
+    });
     if (!updated) {
       return res.status(500).json({ error: 'Kunde inte uppdatera ordern' });
+    }
+
+    if (wasResolved) {
+      console.log(`🔄 Order återaktiverad från historik: ${order.id}`);
     }
 
     console.log(`✅ Order uppdaterad via telefon: ${order.id}`);
