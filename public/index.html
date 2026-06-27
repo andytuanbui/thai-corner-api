@@ -674,7 +674,7 @@
     function bookingDetailsHTML(o) {
       const rows = [];
       if (o.guests)    rows.push(row('Antal gäster:', o.guests));
-      if (o.date_time) rows.push(row('Datum & tid:',  o.date_time));
+      if (o.date_time) rows.push(row('Datum & tid:',  formatDateTime(o.date_time)));
       if (o.name)      rows.push(row('Namn:',         o.name));
       if (o.notes)     rows.push(row('Anteckningar:', o.notes));
       return `<div class="booking-grid">${rows.join('')}</div>`;
@@ -701,7 +701,7 @@
       } else if (order.items && order.items.length) {
         summary = esc(order.items.map(i => [i.num ? `#${i.num}` : '', i.name, i.note ? `(${i.note})` : ''].filter(Boolean).join(' ')).join(' · '));
       } else if (isBooking) {
-        summary = esc([order.name, order.guests ? `${order.guests} gäster` : '', order.date_time].filter(Boolean).join(' — '));
+        summary = esc([order.name, order.guests ? `${order.guests} gäster` : '', formatDateTime(order.date_time)].filter(Boolean).join(' — '));
       }
 
       const prevAttr = (isModified && order.previous_summary)
@@ -749,7 +749,7 @@
         const rows = [];
         if (order.name)      rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Namn:</span><span>${esc(order.name)}</span></div>`);
         if (order.guests)    rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Antal gäster:</span><span>${esc(String(order.guests))}</span></div>`);
-        if (order.date_time) rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Datum & tid:</span><span>${esc(order.date_time)}</span></div>`);
+        if (order.date_time) rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Datum & tid:</span><span>${esc(formatDateTime(order.date_time))}</span></div>`);
         if (order.notes)     rows.push(`<div class="modal-booking-row"><span class="modal-booking-label">Anteckningar:</span><span>${esc(order.notes)}</span></div>`);
         body = `<div class="modal-booking-grid">${rows.join('')}</div>`;
       } else if (order.order_summary) {
@@ -908,6 +908,29 @@
     function hidePrevPopup(id) {
       const el = document.getElementById(`prev-popup-${id}`);
       if (el) el.remove();
+    }
+
+    // Formaterar datum/tid till läsbart svenskt format
+    // Hanterar ISO ("2026-07-05T17:00:00"), "2026-07-05 17:00" och enbart tid ("17:00")
+    function formatDateTime(val) {
+      if (!val) return val;
+      // Bara klockslag, t.ex. "17:00" eller "20:30"
+      if (/^\d{1,2}:\d{2}$/.test(val.trim())) return `kl ${val.trim()}`;
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return val; // okänt format — visa rått
+      const weekdays = ['söndag','måndag','tisdag','onsdag','torsdag','fredag','lördag'];
+      const months   = ['januari','februari','mars','april','maj','juni',
+                        'juli','augusti','september','oktober','november','december'];
+      const day  = weekdays[d.getDay()];
+      const date = d.getDate();
+      const mon  = months[d.getMonth()];
+      const year = d.getFullYear();
+      const hh   = String(d.getHours()).padStart(2, '0');
+      const mm   = String(d.getMinutes()).padStart(2, '0');
+      const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+      return hasTime
+        ? `${day} ${date} ${mon} ${year}, kl ${hh}:${mm}`
+        : `${day} ${date} ${mon} ${year}`;
     }
 
     function timeAgo(iso) {
