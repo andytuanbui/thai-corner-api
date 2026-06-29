@@ -858,7 +858,9 @@
     // Hanterar: komma- och/eller radbrytningsseparation, rätter utan menynummer (ex: "1x California roll")
     function parseSummaryItems(summary) {
       const results = [];
-      const parts = summary.split(/[\n,]+/);
+      // Klyv bara på radbrytningar ELLER komman som omedelbart följs av ett nytt rättnummer (Nx).
+      // Detta bevarar modifier-sekvenser som "-5, +7" inom samma rätt.
+      const parts = summary.split(/\n|,\s*(?=\d+\s*x\s*)/i);
       // Fångar: "1x nummer 9B***" → qty=1, num="9B***", rest="..."
       const numberedRe = /^(\d+)\s*x\s*(?:nummer\s*)?(\d+)([A-Za-z]?\*{0,5})(.*)/i;
       const namedRe    = /^(\d+)\s*x\s+([A-Za-zÅÄÖåäö].*)/i;
@@ -869,9 +871,14 @@
         if (m1) {
           const base = m1[2] + m1[3].toUpperCase(); // ex: "9B***"
           const rest = m1[4].replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
-          // Bevara parentesnotering direkt efter numret, ex: "(extra stärkt)"
+          // Bevara parentesnotering, ex: "(extra stärkt)"
           const parenMatch = rest.match(/^(\([^)]+\))/);
-          const num = parenMatch ? `${base} ${parenMatch[1]}` : base;
+          // Bevara kombinations-modifiers, ex: "-5, +7" eller "-5, +7, -24, +12"
+          const modMatch   = rest.match(/^([+\-]\d+(?:[,\s]*[+\-]\d+)*)/);
+          const suffix = parenMatch
+            ? ` ${parenMatch[1]}`
+            : modMatch ? ` ${modMatch[1].trim()}` : '';
+          const num = base + suffix;
           results.push({ qty: m1[1].trim(), num, name: '' });
           continue;
         }
