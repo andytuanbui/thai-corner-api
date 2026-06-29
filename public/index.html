@@ -873,8 +873,9 @@
           const rest = m1[4].replace(/[.\s]*upph[äa]mtning.*/i, '').trim();
           // Bevara parentesnotering, ex: "(extra stärkt)"
           const parenMatch = rest.match(/^(\([^)]+\))/);
-          // Bevara kombinations-modifiers, ex: "-5, +7" eller "-5, +7, -24, +12"
-          const modMatch   = rest.match(/^([+\-]\d+(?:[,\s]*[+\-]\d+)*)/);
+          // Bevara +/- modifiers — numeriska (ex: "-5, +7") OCH text (ex: "-Sötsur sås +Jordnötssås")
+          // Mönstret matchar [+-] följt av allt fram till nästa [+-] eller slutet, upprepat
+          const modMatch   = rest.match(/^([+\-][^+\-]+(?:[+\-][^+\-]+)*)/);
           const suffix = parenMatch
             ? ` ${parenMatch[1]}`
             : modMatch ? ` ${modMatch[1].trim()}` : '';
