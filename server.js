@@ -204,6 +204,21 @@ app.post('/api/booking', requireApiKey, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// TEST-LÄGE: tvinga restaurangen att verka öppen
+// ─────────────────────────────────────────────
+let forceOpen = false;
+
+app.post('/api/force-open', requireApiKey, (req, res) => {
+  forceOpen = req.body?.enabled === true;
+  console.log(`🧪 Test-läge: forceOpen = ${forceOpen}`);
+  res.json({ force_open: forceOpen });
+});
+
+app.get('/api/force-open', requireApiKey, (req, res) => {
+  res.json({ force_open: forceOpen });
+});
+
+// ─────────────────────────────────────────────
 // GET /api/current-time
 // ─────────────────────────────────────────────
 app.get('/api/current-time', requireApiKey, (req, res) => {
@@ -238,7 +253,8 @@ app.get('/api/current-time', requireApiKey, (req, res) => {
   const [oH, oM] = opens.split(':').map(Number);
   const [cH, cM] = closes.split(':').map(Number);
   const nowMins   = hour * 60 + minute;
-  const is_open         = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
+  const is_open_real    = nowMins >= oH * 60 + oM && nowMins < cH * 60 + cM;
+  const is_open         = forceOpen ? true : is_open_real;
   const next_open_today = !is_open && nowMins < oH * 60 + oM;
   const status          = is_open ? 'open' : next_open_today ? 'before_opening' : 'closed_for_day';
 
