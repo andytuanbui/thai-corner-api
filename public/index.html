@@ -65,6 +65,31 @@
       flex-shrink: 0;
     }
 
+    .test-mode-btn {
+      background: transparent;
+      border: 2px solid #555;
+      color: #888;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .test-mode-btn.active {
+      background: #ff0;
+      border-color: #ff0;
+      color: #000;
+      box-shadow: 0 0 12px rgba(255,255,0,0.6);
+      animation: testpulse 1.5s infinite;
+    }
+    @keyframes testpulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(255,255,0,0.5); }
+      50%       { box-shadow: 0 0 22px rgba(255,255,0,0.9); }
+    }
+
     .sound-btn {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -450,6 +475,9 @@
   <header>
     <span class="logo">🍜 THAI CORNER</span>
     <div class="header-right">
+      <button class="test-mode-btn" id="test-mode-btn" onclick="toggleForceOpen()" title="Tvinga AI:n att tro att restaurangen är öppen, oavsett klockslag">
+        🧪 TESTLÄGE: AV
+      </button>
       <div id="status-dot" class="status-dot" title="Anslutningsstatus"></div>
       <button class="sound-btn" id="sound-btn" onclick="toggleSound()">🔔 Ljud: Av</button>
     </div>
@@ -513,6 +541,7 @@
     });
 
     function startPolling() {
+      initForceOpen();
       refresh();
       setInterval(refresh, 6000);
       setInterval(updateAllTimes, 20000);
@@ -551,6 +580,43 @@
       const colors = { green: '#22C55E', red: '#EF4444', gray: '#94A3B8' };
       document.getElementById('status-dot').style.background = colors[color] || colors.gray;
     }
+
+    // ── Test-läge toggle ──────────────────────────────────
+    let forceOpenActive = false;
+
+    async function initForceOpen() {
+      try {
+        const r = await fetch('/api/force-open', { headers: { 'X-API-Key': apiKey } });
+        const d = await r.json();
+        forceOpenActive = d.force_open;
+        updateTestBtn();
+      } catch (_) {}
+    }
+
+    async function toggleForceOpen() {
+      forceOpenActive = !forceOpenActive;
+      try {
+        await fetch('/api/force-open', {
+          method: 'POST',
+          headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: forceOpenActive }),
+        });
+      } catch (_) {}
+      updateTestBtn();
+    }
+
+    function updateTestBtn() {
+      const btn = document.getElementById('test-mode-btn');
+      if (!btn) return;
+      if (forceOpenActive) {
+        btn.textContent = '🧪 TESTLÄGE: PÅ';
+        btn.classList.add('active');
+      } else {
+        btn.textContent = '🧪 TESTLÄGE: AV';
+        btn.classList.remove('active');
+      }
+    }
+    // ─────────────────────────────────────────────────────
 
     function toggleSound() {
       soundEnabled = !soundEnabled;
