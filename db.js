@@ -61,6 +61,15 @@ async function initDb() {
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at        TEXT`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS was_modified      BOOLEAN NOT NULL DEFAULT false`);
   await pool.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS previous_summary  TEXT`);
+
+  // Jour-tabell (en rad, upsert-mönster)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS staff_on_duty (
+      id    INTEGER PRIMARY KEY DEFAULT 1,
+      phone TEXT    NOT NULL,
+      name  TEXT
+    )
+  `);
   console.log('✅  Databas: schema OK');
 }
 
@@ -229,6 +238,25 @@ async function getActiveOrdersSummary() {
 }
 
 /**
+ * Jour-funktioner — personal på jobb idag
+ */
+async function getOnDuty() {
+  const { rows } = await pool.query(`SELECT phone, name FROM staff_on_duty LIMIT 1`);
+  return rows.length ? rows[0] : { phone: null, name: null };
+}
+
+async function setOnDuty(phone, name) {
+  await pool.query(`
+    INSERT INTO staff_on_duty (id, phone, name) VALUES (1, $1, $2)
+    ON CONFLICT (id) DO UPDATE SET phone = EXCLUDED.phone, name = EXCLUDED.name
+  `, [phone, name ?? null]);
+}
+
+async function deleteOnDuty() {
+  await pool.query(`DELETE FROM staff_on_duty WHERE id = 1`);
+}
+
+/**
  * Parsar items-kolumnen från JSON-sträng till objekt.
  */
 function parseRow(row) {
@@ -238,4 +266,4 @@ function parseRow(row) {
   };
 }
 
-module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary, getActiveOrderByPhone, getLatestOrderByPhone, updateOrder };
+module.exports = { initDb, insertOrder, getActiveOrders, getHistory, resolveOrder, getActiveOrdersSummary, getActiveOrderByPhone, getLatestOrderByPhone, updateOrder, getOnDuty, setOnDuty, deleteOnDuty };
