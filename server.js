@@ -336,7 +336,10 @@ app.patch('/api/order-by-phone/:phone', requireApiKey, async (req, res) => {
     res.json({
       success: true,
       message: 'Ordern har uppdaterats.',
-      order_id: order.id,
+      order_id:         order.id,
+      created_at:       order.created_at,
+      previous_summary: previous_summary,
+      order_summary:    order_summary ?? order.order_summary,
     });
   } catch (err) {
     console.error('Fel i PATCH /api/order-by-phone:', err.message);
