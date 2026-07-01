@@ -33,7 +33,7 @@ const API_KEY = process.env.API_KEY;
 // ─────────────────────────────────────────────
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PATCH', 'OPTIONS', 'HEAD'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
 }));
 
@@ -90,6 +90,43 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ─────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Thai Corner API', time: new Date().toISOString() });
+});
+
+// ─────────────────────────────────────────────
+// Personal på jobb — jour-endpoints
+// GET  /api/on-duty    → hämta aktuellt jour-nummer
+// POST /api/on-duty    → sätt jour-nummer
+// DELETE /api/on-duty  → ta bort jour-nummer
+// ─────────────────────────────────────────────
+app.get('/api/on-duty', requireApiKey, async (req, res) => {
+  try {
+    const duty = await db.getOnDuty();
+    res.json(duty);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/on-duty', requireApiKey, async (req, res) => {
+  try {
+    const { phone, name } = req.body || {};
+    if (!phone) return res.status(400).json({ error: 'phone krävs' });
+    await db.setOnDuty(phone, name ?? null);
+    console.log(`👤 Jour satt: ${name ?? '(namnlös)'} — ${phone}`);
+    res.json({ success: true, phone, name: name ?? null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/on-duty', requireApiKey, async (req, res) => {
+  try {
+    await db.deleteOnDuty();
+    console.log('👤 Jour borttagen');
+    res.json({ success: true, phone: null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─────────────────────────────────────────────
