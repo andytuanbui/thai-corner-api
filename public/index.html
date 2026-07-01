@@ -144,6 +144,94 @@
       margin: 0 auto;
     }
 
+    /* ── Jour-banner ── */
+    #duty-banner {
+      background: #0f1f0f;
+      border-bottom: 2px solid #22C55E;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .duty-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #22C55E;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .duty-info {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      flex: 1;
+    }
+    .duty-phone {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+    .duty-none {
+      font-size: 0.9rem;
+      color: #64748b;
+      font-style: italic;
+      flex: 1;
+    }
+    .duty-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 0.3rem 0.7rem;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .duty-btn:hover { border-color: #22C55E; color: #22C55E; }
+    .duty-btn.danger:hover { border-color: #EF4444; color: #EF4444; }
+    #duty-form {
+      background: #0f1f0f;
+      border-bottom: 2px solid #22C55E;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    #duty-form input {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 5px;
+      color: #fff;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    #duty-form input:focus { border-color: #22C55E; }
+    #duty-form input::placeholder { color: #475569; }
+    .duty-save-btn {
+      background: #22C55E;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .duty-cancel-btn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #64748b;
+      border-radius: 5px;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
     .empty {
       text-align: center;
       color: var(--muted);
@@ -492,6 +580,9 @@
     </div>
   </div>
 
+  <!-- Jour-banner -->
+  <div id="duty-banner" style="display:none"></div>
+
   <div class="content">
     <div id="view-active"></div>
     <div id="view-history" style="display:none"></div>
@@ -542,10 +633,97 @@
 
     function startPolling() {
       initForceOpen();
+      refreshDuty();
       refresh();
       setInterval(refresh, 6000);
       setInterval(updateAllTimes, 20000);
     }
+
+    // ── Jour-funktioner ───────────────────────────────────
+    let dutyData = { phone: null, name: null };
+
+    async function refreshDuty() {
+      try {
+        const r = await fetch('/api/on-duty', { headers: { 'X-API-Key': apiKey } });
+        dutyData = await r.json();
+        renderDutyBanner();
+      } catch (_) {}
+    }
+
+    function renderDutyBanner() {
+      const banner = document.getElementById('duty-banner');
+      if (!banner) return;
+      // Ta bort inbyggt formulär om det finns
+      const form = document.getElementById('duty-form');
+      if (form) form.remove();
+
+      if (dutyData.phone) {
+        banner.style.display = 'flex';
+        banner.innerHTML = `
+          <span class="duty-label">👤 Personal på jobb</span>
+          <span class="duty-info">
+            ${esc(dutyData.name || 'Namnlös')}
+            <span class="duty-phone">&nbsp;— ${esc(dutyData.phone)}</span>
+          </span>
+          <button class="duty-btn" onclick="showDutyForm()">Ändra</button>
+          <button class="duty-btn danger" onclick="removeDuty()">Ta bort</button>
+        `;
+      } else {
+        banner.style.display = 'flex';
+        banner.innerHTML = `
+          <span class="duty-label">👤 Personal på jobb</span>
+          <span class="duty-none">Ingen jour inlagd</span>
+          <button class="duty-btn" onclick="showDutyForm()">+ Sätt jour</button>
+        `;
+      }
+    }
+
+    function showDutyForm() {
+      // Ta bort gammalt formulär om det finns
+      const old = document.getElementById('duty-form');
+      if (old) old.remove();
+
+      const banner = document.getElementById('duty-banner');
+      const form = document.createElement('div');
+      form.id = 'duty-form';
+      form.innerHTML = `
+        <input id="duty-name-input"  type="text" placeholder="Namn (ex: Jan)" value="${esc(dutyData.name || '')}" style="width:130px" />
+        <input id="duty-phone-input" type="tel"  placeholder="+46701234567"  value="${esc(dutyData.phone || '')}" style="width:160px" />
+        <button class="duty-save-btn"   onclick="saveDuty()">Spara</button>
+        <button class="duty-cancel-btn" onclick="hideDutyForm()">Avbryt</button>
+      `;
+      banner.insertAdjacentElement('afterend', form);
+      document.getElementById('duty-name-input').focus();
+    }
+
+    function hideDutyForm() {
+      const form = document.getElementById('duty-form');
+      if (form) form.remove();
+    }
+
+    async function saveDuty() {
+      const phone = document.getElementById('duty-phone-input')?.value?.trim();
+      const name  = document.getElementById('duty-name-input')?.value?.trim();
+      if (!phone) { alert('Ange telefonnummer'); return; }
+      try {
+        const r = await fetch('/api/on-duty', {
+          method: 'POST',
+          headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, name }),
+        });
+        const d = await r.json();
+        if (d.success) { dutyData = { phone, name: name || null }; hideDutyForm(); renderDutyBanner(); }
+      } catch (_) {}
+    }
+
+    async function removeDuty() {
+      try {
+        await fetch('/api/on-duty', { method: 'DELETE', headers: { 'X-API-Key': apiKey } });
+        dutyData = { phone: null, name: null };
+        renderDutyBanner();
+      } catch (_) {}
+    }
+    // ─────────────────────────────────────────────────────
 
     async function refresh() {
       try {
